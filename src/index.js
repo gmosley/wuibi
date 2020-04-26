@@ -1,11 +1,8 @@
-// TODO: fix shaka-player debug import
-// import shaka from 'shaka-player'
-
 import { OAUTH_TOKEN } from './credentials';
 import { GetPlaybackInfoRequest, GetPlaybackInfoResponse, UserProfile } from './wuibi-protos/compiled-proto.js';
 
 // TODO: fix hacky globals
-var manifestUrl = '';
+var manifestUrl = 'https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd';
 var licenseUrl = '';
 // TODO: hardcoding for now
 let episode_id = 264;
@@ -92,39 +89,41 @@ function getPlaybackInfo() {
   httpRequest.send(encoded);
 }
 
-function initApp() {
-  shaka.polyfill.installAll();
-  if (shaka.Player.isBrowserSupported()) {
-    initPlayer();
-  } else {
-    console.error('Browser not supported!');
-  }
+async function initPlayer() {
+  console.log('shaka-player loaded');
+  // When using the UI, the player is made automatically by the UI object.
+  const video = document.getElementById('video');
+  const ui = video['ui'];
+  const controls = ui.getControls();
+  const player = controls.getPlayer();
+
+  // Listen for error events.
+  player.addEventListener('error', onPlayerErrorEvent);
+  controls.addEventListener('error', onUIErrorEvent);
+
+  player.load(manifestUrl).then(function () {
+    console.log('The video has now been loaded!');
+  }).catch(onPlayerError);
 }
 
-function initPlayer() {
-  var video = document.getElementById('video');
-  var player = new shaka.Player(video);
+function onPlayerErrorEvent(errorEvent) {
+  // Extract the shaka.util.Error object from the event.
+  onPlayerError(event.detail);
+}
 
-  player.configure({
-    drm: {
-      servers: {
-        'com.widevine.alpha': licenseUrl,
-      }
-    }
-  });
+function onPlayerError(error) {
+  // Handle player error
+  console.error('Error code', error.code, 'object', error);
+}
 
-  player.getNetworkingEngine().registerRequestFilter(function (type, request) {
-    request.uris.forEach(uri => console.log('Making type ' + type + ' request to ' + uri));
-    // request.uris = [];
-  });
+function onUIErrorEvent(errorEvent) {
+  // Extract the shaka.util.Error object from the event.
+  onPlayerError(event.detail);
+}
 
-  player.addEventListener('error', onErrorEvent);
-
-  player.load(manifestUrl)
-    .then(function () {
-      console.log('The video has now been loaded!');
-    })
-    .catch(onError);
+function initFailed() {
+  // Handle the failure to load
+  console.error('Unable to load the UI library!');
 }
 
 function onErrorEvent(event) {
@@ -137,11 +136,16 @@ function onError(error) {
 
 function run() {
   // getUserProfile();
-  getPlaybackInfo();
+  // getPlaybackInfo();
+  initPlayer();
 }
 
-// TODO: why is video element not available when DOMContentLoaded is used?
-// document.addEventListener('DOMContentLoaded', run());
 window.onload = function () {
   run();
 }
+
+// Listen to the custom shaka-ui-loaded event, to wait until the UI is loaded.
+// document.addEventListener('shaka-ui-loaded', initPlayer());
+// Listen to the custom shaka-ui-load-failed event, in case Shaka Player fails
+// to load (e.g. due to lack of browser support).
+document.addEventListener('shaka-ui-load-failed', initFailed);
