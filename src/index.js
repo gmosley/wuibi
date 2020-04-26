@@ -1,8 +1,8 @@
-import { OAUTH_TOKEN } from './credentials';
+import { OAUTH_TOKEN, QUIBI_USERNAME, QUIBI_PASSWORD, QUIBI_AUTH0_CLIENT_ID_ANDROID } from './credentials';
 import { GetPlaybackInfoRequest, GetPlaybackInfoResponse, UserProfile } from './wuibi-protos/compiled-proto.js';
 
 // TODO: fix hacky globals
-var manifestUrl = 'https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd';
+var manifestUrl = '';
 var licenseUrl = '';
 // TODO: hardcoding for now
 let episode_id = 264;
@@ -49,7 +49,7 @@ function parsePlaybackInfoResponse(playbackInfo) {
     function (cookie) {
       console.log(cookie);
       // cookie is set, let's initialze player
-      initApp();
+      initPlayer();
     });
 }
 
@@ -89,13 +89,21 @@ function getPlaybackInfo() {
   httpRequest.send(encoded);
 }
 
-async function initPlayer() {
+function initPlayer() {
   console.log('shaka-player loaded');
   // When using the UI, the player is made automatically by the UI object.
   const video = document.getElementById('video');
   const ui = video['ui'];
   const controls = ui.getControls();
   const player = controls.getPlayer();
+
+  player.configure({
+    drm: {
+      servers: {
+        'com.widevine.alpha': licenseUrl,
+      }
+    }
+  });
 
   // Listen for error events.
   player.addEventListener('error', onPlayerErrorEvent);
@@ -134,10 +142,42 @@ function onError(error) {
   console.error('Error code', error.code, 'object', error);
 }
 
+
+function doAuth() {
+
+  const authUrl = 'https://login.quibi.com/oauth/token';
+
+  var httpRequest = new XMLHttpRequest();
+  httpRequest.onreadystatechange = function () {
+    if (httpRequest.readyState === XMLHttpRequest.DONE) {
+      if (httpRequest.status === 200) {
+        console.log(JSON.parse(httpRequest.response));
+      } else {
+        console.log('Error with request');
+        console.log(httpRequest);
+      }
+    }
+  };
+
+  httpRequest.open('POST', authUrl);
+  httpRequest.setRequestHeader('Content-Type', 'application/json');
+  httpRequest.send(JSON.stringify({
+    "password": QUIBI_PASSWORD,
+    "scope": "openid profile email offline_access",
+    "client_id": QUIBI_AUTH0_CLIENT_ID_ANDROID,
+    "username": QUIBI_USERNAME,
+    "realm": "Username-Password-Authentication",
+    "audience": "https://qlient-api.quibi.com",
+    "grant_type": "http://auth0.com/oauth/grant-type/password-realm"
+  }));
+}
+
+
 function run() {
   // getUserProfile();
-  // getPlaybackInfo();
-  initPlayer();
+  getPlaybackInfo();
+  // initPlayer();
+  // doAuth();
 }
 
 window.onload = function () {
