@@ -9,6 +9,7 @@ let episode_id = 264;
 
 const quibiApiUrl = 'https://qlient-api.quibi.com/';
 
+let authInfo;
 
 async function makeQuibiApiRequest(endpoint, encodedRequest, responseProto) {
   const url = quibiApiUrl + endpoint;
@@ -119,25 +120,63 @@ function onError(error) {
   console.error('Error code', error.code, 'object', error);
 }
 
-function doAuth() {
-
+async function makeQuibiAuthRequest(data) {
   const authUrl = 'https://login.quibi.com/oauth/token';
+  const response = await fetch(authUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+  return await response.json();
+}
 
-  var httpRequest = new XMLHttpRequest();
-  httpRequest.onreadystatechange = function () {
-    if (httpRequest.readyState === XMLHttpRequest.DONE) {
-      if (httpRequest.status === 200) {
-        console.log(JSON.parse(httpRequest.response));
-      } else {
-        console.log('Error with request');
-        console.log(httpRequest);
-      }
+async function getAuthToken() {
+  // load authInfo from local storage
+  if (authInfo == null) {
+    console.log("loading authInfo from local storage");
+    authInfo = JSON.parse(window.localStorage.getItem('quibiAuthInfo'));
+  }
+  const now = Math.floor(Date.now() / 1000);
+  // if there's no auth info, make the initial request
+  if (authInfo == null) {
+    console.log("making initial auth request");
+    const response = await makeQuibiAuthRequest({
+      "password": QUIBI_PASSWORD,
+      "scope": "openid profile email offline_access",
+      "client_id": QUIBI_AUTH0_CLIENT_ID_ANDROID,
+      "username": QUIBI_USERNAME,
+      "realm": "Username-Password-Authentication",
+      "audience": "https://qlient-api.quibi.com",
+      "grant_type": "http://auth0.com/oauth/grant-type/password-realm"
+    });
+    // TODO: error handling
+    authInfo = {
+      accessToken: response["access_token"],
+      refreshToken: response["refresh_token"],
+      expiryUnix: now + response["expires_in"],
     }
-  };
+    window.localStorage.setItem('quibiAuthInfo', JSON.stringify(authInfo));
+    return authInfo.accessToken;
+  } else {
+    if (authInfo.expireUnix > now) {
+      // need to refresh token
+      // {
+      //   "client_id": QUIBI_AUTH0_CLIENT_ID_ANDROID,
+      //   "refresh_token": "",
+      //   "grant_type": "refresh_token"
+      // }
+      throw "Refresh OAuth not implemented";
+    } else {
+      console.log("already have valid token");
+      return authInfo.accessToken;
+    }
+  }
+}
 
-  httpRequest.open('POST', authUrl);
-  httpRequest.setRequestHeader('Content-Type', 'application/json');
-  httpRequest.send(JSON.stringify({
+async function doAuth() {
+  const request = {
     "password": QUIBI_PASSWORD,
     "scope": "openid profile email offline_access",
     "client_id": QUIBI_AUTH0_CLIENT_ID_ANDROID,
@@ -145,21 +184,23 @@ function doAuth() {
     "realm": "Username-Password-Authentication",
     "audience": "https://qlient-api.quibi.com",
     "grant_type": "http://auth0.com/oauth/grant-type/password-realm"
-  }));
+  };
+  console.log(await makeQuibiAuthRequest(request));
   // TODO: token refreshes
-  // httpRequest.send(JSON.stringify({
-  //   "client_id": QUIBI_AUTH0_CLIENT_ID_ANDROID,
-  //   "refresh_token": "",
-  //   "grant_type": "refresh_token"
-  // }));
+  httpRequest.send(JSON.stringify({
+    "client_id": QUIBI_AUTH0_CLIENT_ID_ANDROID,
+    "refresh_token": "",
+    "grant_type": "refresh_token"
+  }));
 }
 
 
 function run() {
-  getUserProfile();
+  // getUserProfile();
   // getPlaybackInfo();
   // initPlayer();
   // doAuth();
+  getAuthToken().then(console.log);
 }
 
 window.onload = function () {
