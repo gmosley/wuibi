@@ -7,34 +7,33 @@ var licenseUrl = '';
 // TODO: hardcoding for now
 let episode_id = 264;
 
-function getUserProfile() {
-  let getUserProfileUrl =
-    'https://qlient-api.quibi.com/quibi.qlient.api.user.User/GetUserProfile';
+const quibiApiUrl = 'https://qlient-api.quibi.com/';
 
-  var httpRequest = new XMLHttpRequest();
-  httpRequest.onreadystatechange = function () {
-    if (httpRequest.readyState === XMLHttpRequest.DONE) {
-      var status = httpRequest.status;
-      if (status === 0 || (status >= 200 && status < 400)) {
-        let profile = UserProfile.decode(new Uint8Array(httpRequest.response));
-        console.log(profile);
-      } else {
-        console.log('Error with request');
-        console.log(httpRequest);
-      }
-    }
-  };
-  httpRequest.open('POST', getUserProfileUrl);
-  httpRequest.setRequestHeader('Content-Type', 'application/protobuf');
-  httpRequest.setRequestHeader('authorization', 'Bearer ' + OAUTH_TOKEN);
-  httpRequest.responseType = 'arraybuffer';
-  httpRequest.send();
+
+async function makeQuibiApiRequest(endpoint, encodedRequest, responseProto) {
+  const url = quibiApiUrl + endpoint;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/protobuf',
+      'Authorization': 'Bearer ' + OAUTH_TOKEN
+    },
+    body: encodedRequest
+  });
+  const encoded = new Uint8Array(await response.arrayBuffer());
+  return responseProto.decode(encoded);
+}
+
+async function getUserProfile() {
+  const profile = await makeQuibiApiRequest(
+    'quibi.qlient.api.user.User/GetUserProfile', null, UserProfile);
+  console.log(profile);
 }
 
 function parsePlaybackInfoResponse(playbackInfo) {
   // TODO: properly parse this
   licenseUrl = playbackInfo.licenseUrl;
-  // Use landscape manifest
+  // Use "horizontal-video" manifest
   let manifest = playbackInfo.manifests[1];
   manifestUrl = manifest.url;
   let authCookie = manifest.authCookies[0];
@@ -53,40 +52,18 @@ function parsePlaybackInfoResponse(playbackInfo) {
     });
 }
 
-function getPlaybackInfo() {
-  let getPlaybackInfoUrl =
-    'https://qlient-api.quibi.com/quibi.service.playback.Playback/GetPlaybackInfo';
-
-  let getPlaybackInfoRequest = GetPlaybackInfoRequest.create({
+async function getPlaybackInfo() {
+  const getPlaybackInfoRequest = GetPlaybackInfoRequest.create({
     episodeId: episode_id,
     deviceOs: 2,
     connectivity: 1,
     securityLevel: 2,
   });
-  console.log(getPlaybackInfoRequest);
-
-  let encoded = GetPlaybackInfoRequest.encode(getPlaybackInfoRequest).finish();
-
-  var httpRequest = new XMLHttpRequest();
-  httpRequest.onreadystatechange = function () {
-    if (httpRequest.readyState === XMLHttpRequest.DONE) {
-      var status = httpRequest.status;
-      if (status === 0 || (status >= 200 && status < 400)) {
-        let playbackInfo = GetPlaybackInfoResponse.decode(
-          new Uint8Array(httpRequest.response));
-        console.log(playbackInfo);
-        parsePlaybackInfoResponse(playbackInfo);
-      } else {
-        console.log('Error with request');
-        console.log(httpRequest);
-      }
-    }
-  };
-  httpRequest.open('POST', getPlaybackInfoUrl);
-  httpRequest.setRequestHeader('Content-Type', 'application/protobuf');
-  httpRequest.setRequestHeader('authorization', 'Bearer ' + OAUTH_TOKEN);
-  httpRequest.responseType = 'arraybuffer';
-  httpRequest.send(encoded);
+  const encodedRequest = GetPlaybackInfoRequest.encode(getPlaybackInfoRequest).finish();
+  const playbackInfo = await makeQuibiApiRequest(
+    'quibi.service.playback.Playback/GetPlaybackInfo', encodedRequest, GetPlaybackInfoResponse);
+  console.log(playbackInfo);
+  parsePlaybackInfoResponse(playbackInfo);
 }
 
 function initPlayer() {
@@ -142,7 +119,6 @@ function onError(error) {
   console.error('Error code', error.code, 'object', error);
 }
 
-
 function doAuth() {
 
   const authUrl = 'https://login.quibi.com/oauth/token';
@@ -170,12 +146,18 @@ function doAuth() {
     "audience": "https://qlient-api.quibi.com",
     "grant_type": "http://auth0.com/oauth/grant-type/password-realm"
   }));
+  // TODO: token refreshes
+  // httpRequest.send(JSON.stringify({
+  //   "client_id": QUIBI_AUTH0_CLIENT_ID_ANDROID,
+  //   "refresh_token": "",
+  //   "grant_type": "refresh_token"
+  // }));
 }
 
 
 function run() {
-  // getUserProfile();
-  getPlaybackInfo();
+  getUserProfile();
+  // getPlaybackInfo();
   // initPlayer();
   // doAuth();
 }
