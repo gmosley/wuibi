@@ -13,11 +13,12 @@ let authInfo;
 
 async function makeQuibiApiRequest(endpoint, encodedRequest, responseProto) {
   const url = quibiApiUrl + endpoint;
+  const token = await getAuthToken();
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/protobuf',
-      'Authorization': 'Bearer ' + OAUTH_TOKEN
+      'Authorization': 'Bearer ' + token
     },
     body: encodedRequest
   });
@@ -132,7 +133,18 @@ async function makeQuibiAuthRequest(data) {
   return await response.json();
 }
 
+function updateAuthInfo(authResponse, now) {
+  const authInfo = {
+    accessToken: authResponse["access_token"],
+    refreshToken: authResponse["refresh_token"],
+    expiryUnix: now + authResponse["expires_in"],
+  }
+  window.localStorage.setItem('quibiAuthInfo', JSON.stringify(authInfo));
+  return authInfo;
+}
+
 async function getAuthToken() {
+  // TODO: tons of error handling
   // load authInfo from local storage
   if (authInfo == null) {
     console.log("loading authInfo from local storage");
@@ -151,23 +163,17 @@ async function getAuthToken() {
       "audience": "https://qlient-api.quibi.com",
       "grant_type": "http://auth0.com/oauth/grant-type/password-realm"
     });
-    // TODO: error handling
-    authInfo = {
-      accessToken: response["access_token"],
-      refreshToken: response["refresh_token"],
-      expiryUnix: now + response["expires_in"],
-    }
-    window.localStorage.setItem('quibiAuthInfo', JSON.stringify(authInfo));
-    return authInfo.accessToken;
+    return updateAuthInfo(response, now).accessToken;
   } else {
-    if (authInfo.expireUnix > now) {
-      // need to refresh token
-      // {
-      //   "client_id": QUIBI_AUTH0_CLIENT_ID_ANDROID,
-      //   "refresh_token": "",
-      //   "grant_type": "refresh_token"
-      // }
-      throw "Refresh OAuth not implemented";
+    if (now > authInfo.expiryUnix) {
+      console.log("refreshing auth token");
+      const response = await makeQuibiAuthRequest({
+        "client_id": QUIBI_AUTH0_CLIENT_ID_ANDROID,
+        "refresh_token": authInfo.refreshToken,
+        "grant_type": "refresh_token"
+      });
+      console.log(response);
+      return updateAuthInfo(response, now).accessToken;
     } else {
       console.log("already have valid token");
       return authInfo.accessToken;
@@ -200,7 +206,7 @@ function run() {
   // getPlaybackInfo();
   // initPlayer();
   // doAuth();
-  getAuthToken().then(console.log);
+  // getAuthToken().then(console.log);
 }
 
 window.onload = function () {
