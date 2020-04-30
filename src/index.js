@@ -1,5 +1,5 @@
 import { OAUTH_TOKEN, QUIBI_USERNAME, QUIBI_PASSWORD, QUIBI_AUTH0_CLIENT_ID_ANDROID } from './credentials';
-import { GetPlaybackInfoRequest, GetPlaybackInfoResponse, UserProfile } from './wuibi-protos/compiled-proto.js';
+import { GetPlaybackInfoRequest, GetPlaybackInfoResponse, UserProfile } from './protos/compiled-protos.js';
 
 // TODO: fix hacky globals
 var manifestUrl = '';
@@ -134,25 +134,26 @@ async function makeQuibiAuthRequest(data) {
 }
 
 function updateAuthInfo(authResponse, now) {
-  const authInfo = {
-    accessToken: authResponse["access_token"],
-    refreshToken: authResponse["refresh_token"],
-    expiryUnix: now + authResponse["expires_in"],
+  if ("refresh_token" in authResponse) {
+    authInfo.refreshToken = authResponse["refresh_token"]
   }
+  authInfo.accessToken = authResponse["access_token"];
+  authInfo.expiryUnix = now + authResponse["expires_in"]
   window.localStorage.setItem('quibiAuthInfo', JSON.stringify(authInfo));
   return authInfo;
 }
 
 async function getAuthToken() {
   // TODO: tons of error handling
+  // TODO: refactor
   // load authInfo from local storage
   if (authInfo == null) {
     console.log("loading authInfo from local storage");
-    authInfo = JSON.parse(window.localStorage.getItem('quibiAuthInfo'));
+    authInfo = JSON.parse(window.localStorage.getItem('quibiAuthInfo')) || {};
   }
   const now = Math.floor(Date.now() / 1000);
   // if there's no auth info, make the initial request
-  if (authInfo == null) {
+  if (!("refreshToken" in authInfo)) {
     console.log("making initial auth request");
     const response = await makeQuibiAuthRequest({
       "password": QUIBI_PASSWORD,
@@ -172,7 +173,6 @@ async function getAuthToken() {
         "refresh_token": authInfo.refreshToken,
         "grant_type": "refresh_token"
       });
-      console.log(response);
       return updateAuthInfo(response, now).accessToken;
     } else {
       console.log("already have valid token");
@@ -202,7 +202,7 @@ async function doAuth() {
 
 
 function run() {
-  // getUserProfile();
+  getUserProfile();
   // getPlaybackInfo();
   // initPlayer();
   // doAuth();
