@@ -36,20 +36,23 @@ function parsePlaybackInfoResponse(playbackInfo) {
   // Use "horizontal-video" manifest
   let manifest = playbackInfo.manifests[1];
   manifestUrl = manifest.url;
-  let authCookie = manifest.authCookies[0];
-  chrome.cookies.set(
-    {
+  // Manifests also contain authParams (URL params) which have identical 
+  // values to authCookies. However, the Android client uses cookies 
+  // and we already need a web extension to bypass same origin policy so
+  // let's authenticate via cookies.
+  let cookiePromises = manifest.authCookies.map(authCookie =>
+    browser.cookies.set({
       url: manifest.url,
       name: authCookie.name,
       value: authCookie.value,
       domain: authCookie.domain,
       path: authCookie.path
-    },
-    function (cookie) {
-      console.log(cookie);
-      // cookie is set, let's initialze player
-      initPlayer();
-    });
+    })
+  );
+  Promise.all(cookiePromises).then(cookies => {
+    cookies.forEach(console.log);
+    initPlayer();
+  });
 }
 
 async function getPlaybackInfo(episodeId) {
