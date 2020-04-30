@@ -1,11 +1,9 @@
 import { OAUTH_TOKEN, QUIBI_USERNAME, QUIBI_PASSWORD, QUIBI_AUTH0_CLIENT_ID_ANDROID } from './credentials';
-import { GetPlaybackInfoRequest, GetPlaybackInfoResponse, UserProfile } from './protos/compiled-protos.js';
+import { GetPlaybackInfoRequest, GetPlaybackInfoResponse, UserProfile, GetShowRequest, GetShowResponse } from './protos/compiled-protos.js';
 
 // TODO: fix hacky globals
 var manifestUrl = '';
 var licenseUrl = '';
-// TODO: hardcoding for now
-let episode_id = 264;
 
 const quibiApiUrl = 'https://qlient-api.quibi.com/';
 
@@ -54,9 +52,9 @@ function parsePlaybackInfoResponse(playbackInfo) {
     });
 }
 
-async function getPlaybackInfo() {
+async function getPlaybackInfo(episodeId) {
   const getPlaybackInfoRequest = GetPlaybackInfoRequest.create({
-    episodeId: episode_id,
+    episodeId: episodeId,
     deviceOs: 2,
     connectivity: 1,
     securityLevel: 2,
@@ -66,6 +64,31 @@ async function getPlaybackInfo() {
     'quibi.service.playback.Playback/GetPlaybackInfo', encodedRequest, GetPlaybackInfoResponse);
   console.log(playbackInfo);
   parsePlaybackInfoResponse(playbackInfo);
+}
+
+async function getShow(showId) {
+  const getShowRequest = GetShowRequest.create({ id: showId });
+  const showResponse = await makeQuibiApiRequest(
+    'quibi.qlient.api.content.Content/GetShow',
+    GetShowRequest.encode(getShowRequest).finish(),
+    GetShowResponse);
+  parseGetShowResponse(showResponse);
+}
+
+function parseGetShowResponse(showResponse) {
+  const show = showResponse.show;
+  let videoLinks = document.getElementById("video-links");
+  showResponse.seasons.forEach((season) => {
+    season.episodes.forEach((episode) => {
+      const displayName =
+        `${show.title} S${episode.seasonNum}E${episode.episodeNum} - ${episode.title}`;
+      let link = document.createElement("button");
+      link.onclick = function (_) { getPlaybackInfo(episode.id); };
+      link.innerHTML = displayName;
+      videoLinks.appendChild(link);
+      videoLinks.appendChild(document.createElement("br"));
+    });
+  });
 }
 
 function initPlayer() {
@@ -202,11 +225,15 @@ async function doAuth() {
 
 
 function run() {
-  getUserProfile();
-  // getPlaybackInfo();
+  // TODO: hardcoding for now
+  let episode_id = 264;
+  let show_id = 499;
+  // getUserProfile();
+  // getPlaybackInfo(episode_id);
   // initPlayer();
   // doAuth();
   // getAuthToken().then(console.log);
+  getShow(show_id);
 }
 
 window.onload = function () {
