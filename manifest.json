@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "description": "Unofficial Quibi Web Player",
   "permissions": [
+    "cookies",
     "webRequest",
     "webRequestBlocking",
     "*://*/*"
@@ -17,6 +18,10 @@
   "browser_action": {},
   "web_accessible_resources": [
     "dist/wuibi.html",
-    "dist/main.js"
+    "dist/main.js",
+    "dist/shaka-player.ui.js",
+    "dist/shaka-player.ui.debug.js",
+    "dist/controls.css",
+    "dist/browser-polyfill.js"
   ]
 }

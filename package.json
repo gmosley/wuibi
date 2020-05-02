@@ -4,15 +4,18 @@
   "description": "",
   "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "pbjs -t static-module -w es6 src/protos/protos.proto > src/protos/compiled-protos.js"
   },
   "keywords": [],
   "author": "",
   "devDependencies": {
+    "copy-webpack-plugin": "^5.1.1",
+    "webextension-polyfill": "^0.6.0",
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11"
   },
   "dependencies": {
-    "protobufjs": "~6.9.0"
+    "protobufjs": "~6.9.0",
+    "shaka-player": "^2.5.10"
   }
 }
