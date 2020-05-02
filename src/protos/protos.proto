@@ -4,3 +4,77 @@ message UserProfile {
   string email = 1;
   string user_id = 2;
 }
+
+enum Connectivity { CONNECTIVITY_WIFI = 1; }
+
+enum DeviceOS { DEVICE_OS_ANDROID_GENERIC = 2; }
+
+enum SecurityLevel { SECURITY_LEVEL_SOFTWARE = 2; }
+
+message GetPlaybackInfoRequest {
+  uint32 episode_id = 1;
+  DeviceOS device_os = 2;
+  Connectivity connectivity = 3;
+  bool download = 4;
+  string device_id = 6;
+  uint32 trailer_id = 7;
+  SecurityLevel security_level = 8;
+  uint32 ad_id = 9;
+}
+
+message Manifest {
+  string url = 1;
+  repeated AuthCookie auth_cookies = 5;
+}
+
+message AuthCookie {
+  string name = 1;
+  string value = 2;
+  string path = 3;
+  string domain = 4;
+}
+
+message GetPlaybackInfoResponse {
+  string license_url = 2;
+  repeated Manifest manifests = 4;
+}
+
+message Show {
+  uint32 id = 1;
+  string title = 2;
+  string description = 3;
+  string tagline = 4;
+  string logo_url = 6;
+  string portrait_thumbnail_url = 7;
+  string landscape_thumbnail_url = 8;
+  string long_description = 13;
+  string external_id = 16;
+  string deeplink_url = 17;
+}
+
+message Season {
+  uint32 num = 1;
+  uint32 show_id = 2;
+  repeated Episode episodes = 3;
+  string deeplink_url = 5;
+}
+
+message Episode {
+  uint32 id = 1;
+  string title = 2;
+  string description = 3;
+  uint32 season_num = 4;
+  uint32 episode_num = 5;
+  string portrait_thumbnail_url = 6;
+  string landscape_thumbnail_url = 7;
+  uint32 duration_ms = 8;
+  string tagline = 12;
+}
+
+message GetShowRequest { uint32 id = 1; }
+
+message GetShowResponse {
+  Show show = 1;
+  Episode episode = 2;
+  repeated Season seasons = 3;
+}
