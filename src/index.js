@@ -1,4 +1,4 @@
-import { OAUTH_TOKEN, QUIBI_USERNAME, QUIBI_PASSWORD, QUIBI_AUTH0_CLIENT_ID_ANDROID } from './credentials';
+import { QUIBI_USERNAME, QUIBI_PASSWORD } from './credentials';
 import { GetPlaybackInfoRequest, GetPlaybackInfoResponse, UserProfile, GetShowRequest, GetShowResponse } from './protos/compiled-protos.js';
 
 // TODO: fix hacky globals
@@ -177,6 +177,8 @@ async function getAuthToken() {
     console.log("loading authInfo from local storage");
     authInfo = JSON.parse(window.localStorage.getItem('quibiAuthInfo')) || {};
   }
+  // OAuth client id for android app
+  const oAuthClientId = "dd1r0IBYVwi8CJeVS57mSN7HXIojPr5j"
   const now = Math.floor(Date.now() / 1000);
   // if there's no auth info, make the initial request
   if (!("refreshToken" in authInfo)) {
@@ -184,7 +186,7 @@ async function getAuthToken() {
     const response = await makeQuibiAuthRequest({
       "password": QUIBI_PASSWORD,
       "scope": "openid profile email offline_access",
-      "client_id": QUIBI_AUTH0_CLIENT_ID_ANDROID,
+      "client_id": oAuthClientId,
       "username": QUIBI_USERNAME,
       "realm": "Username-Password-Authentication",
       "audience": "https://qlient-api.quibi.com",
@@ -195,7 +197,7 @@ async function getAuthToken() {
     if (now > authInfo.expiryUnix) {
       console.log("refreshing auth token");
       const response = await makeQuibiAuthRequest({
-        "client_id": QUIBI_AUTH0_CLIENT_ID_ANDROID,
+        "client_id": oAuthClientId,
         "refresh_token": authInfo.refreshToken,
         "grant_type": "refresh_token"
       });
