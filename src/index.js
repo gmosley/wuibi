@@ -1,15 +1,10 @@
 import { QUIBI_USERNAME, QUIBI_PASSWORD } from './credentials';
-import { GetPlaybackInfoRequest, GetPlaybackInfoResponse, UserProfile, GetShowRequest, GetShowResponse } from './protos/compiled-protos.js';
-
-// TODO: fix hacky globals
-var manifestUrl = '';
-var licenseUrl = '';
-
-const quibiApiUrl = 'https://qlient-api.quibi.com/';
+import { GetPlaybackInfoRequest, GetPlaybackInfoResponse, UserProfile, GetShowRequest, GetShowResponse, Subtitle } from './protos/compiled-protos.js';
 
 let authInfo;
 
 async function makeQuibiApiRequest(endpoint, encodedRequest, responseProto) {
+  const quibiApiUrl = 'https://qlient-api.quibi.com/';
   const url = quibiApiUrl + endpoint;
   const token = await getAuthToken();
   const response = await fetch(url, {
@@ -32,10 +27,10 @@ async function getUserProfile() {
 
 function parsePlaybackInfoResponse(playbackInfo) {
   // TODO: properly parse this
-  licenseUrl = playbackInfo.licenseUrl;
-  // Use "horizontal-video" manifest
-  let manifest = playbackInfo.manifests[1];
-  manifestUrl = manifest.url;
+  const licenseUrl = playbackInfo.licenseUrl;
+  // Use "horizontal-video" manifest which is hopefully the last manifest
+  let manifest = playbackInfo.manifests[playbackInfo.manifests.length - 1];
+  const manifestUrl = manifest.url;
   // Manifests also contain authParams (URL params) which have identical 
   // values to authCookies. However, the Android client uses cookies 
   // and we already need a web extension to bypass same origin policy so
@@ -51,7 +46,7 @@ function parsePlaybackInfoResponse(playbackInfo) {
   );
   Promise.all(cookiePromises).then(cookies => {
     cookies.forEach(console.log);
-    initPlayer();
+    initPlayer(manifestUrl, licenseUrl, playbackInfo.subtitles);
   });
 }
 
@@ -94,7 +89,7 @@ function parseGetShowResponse(showResponse) {
   });
 }
 
-function initPlayer() {
+function initPlayer(manifestUrl, licenseUrl, subtitles) {
   console.log('shaka-player loaded');
   // When using the UI, the player is made automatically by the UI object.
   const video = document.getElementById('video');
@@ -116,6 +111,15 @@ function initPlayer() {
 
   player.load(manifestUrl).then(function () {
     console.log('The video has now been loaded!');
+    for (const subtitle of subtitles) {
+      // Use a different language string SUBTITLE_KIND_CC
+      // so it shows as a different text track
+      // TODO: this should be possible via the 'kind' argument
+      // TODO: how to use enums?
+      const language =
+        subtitle.iso_639_2Code + (subtitle.kind === 2 ? '-cc' : '');
+      player.addTextTrack(subtitle.url, language, '', 'text/vtt');
+    }
   }).catch(onPlayerError);
 }
 

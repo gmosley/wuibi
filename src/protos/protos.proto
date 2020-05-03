@@ -34,9 +34,22 @@ message AuthCookie {
   string domain = 4;
 }
 
+enum SubtitleKind {
+  SUBTITLE_KIND_INVALID = 0;
+  SUBTITLE_KIND_SUBTITLE = 1;
+  SUBTITLE_KIND_CC = 2;
+}
+
+message Subtitle {
+  string url = 1;
+  string iso_639_2_code = 2;
+  SubtitleKind kind = 3;
+}
+
 message GetPlaybackInfoResponse {
   string license_url = 2;
   repeated Manifest manifests = 4;
+  repeated Subtitle subtitles = 5;
 }
 
 message Show {
