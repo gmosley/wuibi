@@ -91,3 +91,31 @@ message GetShowResponse {
   Episode episode = 2;
   repeated Season seasons = 3;
 }
+
+message SearchRequest { string query = 1; }
+
+message SearchResponse {
+  SearchResponseSet top = 1;
+  SearchResponseSet shows = 2;
+  SearchResponseSet episodes = 3;
+}
+
+message SearchResponseSet {
+  repeated SearchResult results = 1;
+  double max_score = 2;
+}
+
+message SearchResult {
+  oneof result {
+    SearchShowsResult show_result = 1;
+    SearchEpisodeResult episode_result = 2;
+  }
+  double score = 3;
+}
+
+message SearchShowsResult { Show show = 1; }
+
+message SearchEpisodeResult {
+  Show show = 1;
+  Episode episode = 2;
+}

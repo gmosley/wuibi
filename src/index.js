@@ -1,5 +1,5 @@
 import { QUIBI_USERNAME, QUIBI_PASSWORD } from './credentials';
-import { GetPlaybackInfoRequest, GetPlaybackInfoResponse, UserProfile, GetShowRequest, GetShowResponse, Subtitle } from './protos/compiled-protos.js';
+import { GetPlaybackInfoRequest, GetPlaybackInfoResponse, UserProfile, GetShowRequest, GetShowResponse, SearchRequest, SearchResponse } from './protos/compiled-protos.js';
 
 let authInfo;
 
@@ -87,6 +87,18 @@ function parseGetShowResponse(showResponse) {
       videoLinks.appendChild(document.createElement("br"));
     });
   });
+}
+
+async function search(query) {
+  const searchRequest = SearchRequest.create({
+    query: query,
+  });
+  console.log(searchRequest);
+  const searchResponse = await makeQuibiApiRequest(
+    'quibi.qlient.api.search.Search/SearchShows',
+    SearchRequest.encode(searchRequest).finish(),
+    SearchResponse);
+  console.log(searchResponse);
 }
 
 function initPlayer(manifestUrl, licenseUrl, subtitles) {
@@ -243,6 +255,7 @@ function run() {
   // doAuth();
   // getAuthToken().then(console.log);
   getShow(show_id);
+  search("flipped");
 }
 
 window.onload = function () {
