@@ -6,16 +6,16 @@ module.exports = {
     new CopyPlugin([
       {
         from: 'node_modules/webextension-polyfill/dist/browser-polyfill.js',
-        to: 'dist/'
+        to: '.'
       },
       {
         from: 'node_modules/shaka-player/dist/shaka-player.ui.debug.js',
-        to: 'dist/'
+        to: '.'
       },
       {
         from: 'node_modules/shaka-player/dist/controls.css',
-        to: 'dist/'
-      }
+        to: '.'
+      },
     ]),
   ],
 };
