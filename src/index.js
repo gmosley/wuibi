@@ -26,6 +26,7 @@ async function getUserProfile() {
 }
 
 function parsePlaybackInfoResponse(playbackInfo) {
+  console.log(playbackInfo.manifests);
   // TODO: properly parse this
   const licenseUrl = playbackInfo.licenseUrl;
   // Use "horizontal-video" manifest which is hopefully the last manifest
@@ -76,13 +77,16 @@ async function getShow(showId) {
 function parseGetShowResponse(showResponse) {
   const show = showResponse.show;
   let videoLinks = document.getElementById("video-links");
+  videoLinks.innerHTML = "";
+  let header = videoLinks.appendChild(document.createElement("h2"));
+  header.innerText = `${show.title} Episodes`;
   showResponse.seasons.forEach((season) => {
     season.episodes.forEach((episode) => {
       const displayName =
         `${show.title} S${episode.seasonNum}E${episode.episodeNum} - ${episode.title}`;
       let link = document.createElement("button");
       link.onclick = function (_) { getPlaybackInfo(episode.id); };
-      link.innerHTML = displayName;
+      link.innerText = displayName;
       videoLinks.appendChild(link);
       videoLinks.appendChild(document.createElement("br"));
     });
@@ -93,12 +97,12 @@ async function search(query) {
   const searchRequest = SearchRequest.create({
     query: query,
   });
-  console.log(searchRequest);
   const searchResponse = await makeQuibiApiRequest(
     'quibi.qlient.api.search.Search/SearchShows',
     SearchRequest.encode(searchRequest).finish(),
     SearchResponse);
   console.log(searchResponse);
+  parseSearchResults(searchResponse);
 }
 
 function initPlayer(manifestUrl, licenseUrl, subtitles) {
@@ -244,18 +248,59 @@ async function doAuth() {
   }));
 }
 
+function parseSearchResults(searchResults) {
+  let resultsDiv = document.getElementById("search-results");
+  resultsDiv.innerHTML = "";
+  if (searchResults.episodes.results.length > 0) {
+    let episodesHeader = resultsDiv.appendChild(document.createElement('h2'));
+    episodesHeader.innerText = "Episodes";
+    console.log(searchResults.episodes.results);
+    for (const result of searchResults.episodes.results) {
+      const show = result.episodeResult.show;
+      const episode = result.episodeResult.episode;
+      const displayName =
+        `${show.title} S${episode.seasonNum}E${episode.episodeNum} - ${episode.title}`
+      let button = resultsDiv.appendChild(document.createElement("button"));
+      resultsDiv.appendChild(document.createElement("br"));
+      button.onclick = function (_) { getPlaybackInfo(episode.id); };
+      button.innerText = displayName;
+    }
+  }
+  if (searchResults.shows.results.length > 0) {
+    let episodesHeader = resultsDiv.appendChild(document.createElement('h2'));
+    episodesHeader.innerText = "Shows";
+    for (const result of searchResults.shows.results) {
+      const show = result.showResult.show;
+      let button = resultsDiv.appendChild(document.createElement("button"));
+      resultsDiv.appendChild(document.createElement("br"));
+      button.onclick = function (_) { getShow(show.id); };
+      button.innerText = show.title;
+    }
+  }
+}
+
+function setupSearch() {
+  let searchButton = document.getElementById("search-button");
+  let searchInput = document.getElementById("search-input");
+  const searchFunction = function (_) {
+    search(searchInput.value);
+  }
+  searchButton.onclick = searchFunction;
+  searchInput.addEventListener('keyup', function (e) {
+    if (e.key === 'Enter') {
+      searchFunction();
+    }
+  });
+}
 
 function run() {
-  // TODO: hardcoding for now
-  let episode_id = 264;
-  let show_id = 499;
+  setupSearch();
   // getUserProfile();
   // getPlaybackInfo(episode_id);
   // initPlayer();
   // doAuth();
   // getAuthToken().then(console.log);
-  getShow(show_id);
-  search("flipped");
+  search("reno");
 }
 
 window.onload = function () {
